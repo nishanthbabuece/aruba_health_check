@@ -1,0 +1,48 @@
+import base64
+import paramiko
+import netmiko
+import time
+import re
+from netmiko import ConnectHandler
+import sys
+import datetime
+
+ 
+ip = ["1.1.1.1","2.2.2.2", "3.3.3.3", "4.4.4.4"] # here you can add all the IP's that you want to run health check or config checks for.
+cmd = ["show clock", "show crypto ipsec sa","show ip nexthop-list", "show user-table","show datapath session table" ] # here you can add all the commands that you need to run in the SSH prompt for the devices
+#print(type(device1))
+for x in ip:
+    current_dt_time = datetime.datetime.now()
+    current_date_and_time_string = current_dt_time.strftime("%d %B %Y")
+    extension = ".txt"
+
+    file_name = str(str(x) +"_"+ current_date_and_time_string + extension)
+    print("Creating file"+str(file_name))
+    print("connecting to "+x)
+    # Saving the reference of the standard output
+    original_stdout = sys.stdout
+    with open(file_name, 'w') as f:
+        sys.stdout = f
+        print("Healthcheck being prepared to file "+ file_name)
+        device1 = {"device_type":"aruba_os", "ip":x,"username":"username","password":"password"}
+        print(device1)
+        net_connect = ConnectHandler(**device1)
+        net_connect.send_command("terminal length 0\n") # Make terminal length to 0 to display all
+        time.sleep(1) # Pause for 1 second
+        for c in cmd:
+            print(c)
+            out1= net_connect.send_command(c) #
+            time.sleep(1) # Pause for 1 second
+            print(out1)
+            print("^^^"*50)
+        sys.stdout= original_stdout
+
+
+
+
+
+
+
+
+
+
