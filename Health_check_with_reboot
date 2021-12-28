@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+###########################################################################################
+# Purpose: This script will help to run show commands and reboot on Aruba controller                 #
+###########################################################################################
+
+from netmiko import ConnectHandler
+from datetime import datetime
+import argparse
+import sys
+
+# Set static variables here:
+
+
+
+BOC_CMDS = ['show user-table', 'show user-table | inc Qua', 'show version', 'show ip nexthop-list', 'show crypto ipsec sa', 'show arp', 'show uplink', 'show ip int bri', 'show port status']
+
+
+
+print ("*** Pre-check and reboot logs --- Printing execution steps on terminal ***" '\n')
+
+
+
+#AllStores_IPS
+#BOC_IPS =['IP address 1', 'IP Adress2']
+BOC_IPS =['x.x.x.x', 'y.y.y.y']
+logfile = "precheck-and-reboot-logs"
+
+###### Parsing Log file #####
+print ("### Step: Setting log file ###" '\n')
+
+time_stamp = datetime.now().strftime('%H_%M_%S_%d_%m_%Y')
+LOG_FILENAME = '%s-%s.txt' %(logfile, time_stamp)
+print ("   *** Log file name is set to '%s'" '\n' %(LOG_FILENAME))
+# Creating a file in file path with file name defined.
+f = open('%s' %(LOG_FILENAME), "w")
+
+for ip in BOC_IPS:
+    BOC = {
+        'device_type' : 'aruba_os',
+        'ip'          : '%s' %(ip),
+        'username'    : 'Username',
+        'password'    : 'password',
+        'secret'      : 'enable',
+        'global_delay_factor'      : 2
+        }
+
+    print ("### Step: Getting device handle ###" '\n')
+    # Creating a connection handle to send cmds.
+    devices = [BOC]
+
+    for device in devices:
+        con= ConnectHandler(**device)
+        if device is BOC:
+            cmds = BOC_CMDS
+            print ("   *** Setting BOC as device, commands ***"  '\n' )
+        print ("   *** Connected to device '%s'" '\n' %(ip))
+
+        print ("### Step: Command execution start on device '%s' ###" '\n' %(ip))
+        output = ("**********************************************************" '\n')
+        output += ("* Start Logs Capture for Device '%s' *"  '\n' %(ip))
+        output += ("**********************************************************" '\n')
+        output += ('\n')
+        print (output)
+        f.write(output)
+
+        # executing all cmds define in commands list above.
+        for cmd in cmds:
+            output = ('\n')
+            output += ("***** Executing Command *****" '"%s" \n'%(cmd))
+            output += ('\n')
+            output += (con.find_prompt())
+            output += ('%s' %(cmd))
+            output += ('\n')
+            output += con.send_command('%s' %(cmd))
+            output += con.send_command('\n')
+            output += ('\n')
+            print (output)
+            f.write(output)
+        output = ("**********************************************************" '\n')
+        output += ("* Stop Logs Capture for Device:'%s' *"  '\n' % (ip))
+        output += ("**********************************************************" '\n')
+        print("### Step: Command execution end on device '%s' ###" '\n' % (ip))
+        output += ('\n')
+        print(output)
+        f.write(output)
+        con.find_prompt()
+        #con.send_command(‘reload’, expect_string = 'confirm’)
+        out=(con.send_command('reload', expect_string='restart'))
+        print(out)
+        out+=(con.send_command('y', expect_string='System'))
+        print(out)
+
+        # Disconnecting the connection handle
+    con.disconnect()
+    print("### Step: Disconnection for device '%s' ###" '\n' % (ip))
+
+# Closing the file after writing the output buffer.
+f.close()
+print("   *** Please find your Logs, file name: '%s'" '\n' % (LOG_FILENAME))
